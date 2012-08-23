@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/maxtaco/node-fast-msgpack-rpc.png)](http://travis-ci.org/maxtaco/node-fast-msgpack-rpc)
 maxtaco/node-msgpack-rpc
 ========================
 
