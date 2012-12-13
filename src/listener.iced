@@ -81,7 +81,7 @@ exports.Listener = class Listener
   ##-----------------------------------------
 
   _warn : (err) -> @log_obj.warn err
-  _err  : (err) -> @log_obj.err err
+  _err  : (err) -> @log_obj.error err
 
   ##-----------------------------------------
 
