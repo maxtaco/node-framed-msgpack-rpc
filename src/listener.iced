@@ -54,6 +54,9 @@ exports.Listener = class Listener
   # Feel free to change this for your needs (if you want to wrap a connection
   # with something else)...
   make_new_transport : (c) ->
+    # Disable Nagle by default
+    c.setNoDelay true unless @do_tcp_delay
+
     x = new @TransportClass
       tcp_stream : c
       host : c.remoteAddress
