@@ -10,23 +10,23 @@ exports.Ring = class Ring
   """
 
   #-----------------------------------------
-  
+
   constructor : ->
     @_bufs = []
     @_len = 0
 
   #-----------------------------------------
-  
+
   buffer : (b) ->
     @_bufs.push b
     @_len += b.length
 
   #-----------------------------------------
-  
+
   len : () -> @_len
 
   #-----------------------------------------
-  
+
   grab : (n_wanted) ->
 
     # Fail fast if there just aren't enough bytes...
@@ -36,7 +36,7 @@ exports.Ring = class Ring
     return @_bufs[0] if @_bufs.length and @_bufs[0].length >= n_wanted
 
     n_grabbed = 0
-    
+
     num_bufs = 0
     for b in @_bufs
       n_grabbed += b.length
@@ -59,7 +59,7 @@ exports.Ring = class Ring
     @_bufs = @_bufs[first_pos...]
 
     return ret
-    
+
   #-----------------------------------------
 
   consume : (n) ->
@@ -70,7 +70,7 @@ exports.Ring = class Ring
     else
       @_bufs[0] = b[n...]
     @_len -= n
-        
 
-  
+
+
 

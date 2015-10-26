@@ -2,7 +2,7 @@
 iced = require('./iced').runtime
 
 ##-----------------------------------------------------------------------
- 
+
 exports.Lock = class Lock
   constructor : ->
     @_open = true

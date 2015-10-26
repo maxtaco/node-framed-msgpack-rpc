@@ -10,7 +10,7 @@ msgpack_frame_len = (buf) ->
   b = buf[0]
   if b < 0x80 then 1
   else if b is 0xcc then 2
-  else if b is 0xcd then 3 
+  else if b is 0xcd then 3
   else if b is 0xce then 5
   else 0
 
@@ -25,14 +25,14 @@ exports.Packetizer = class Packetizer
   A packetizer that is used to read and write to an underlying stream
   (like a Transport below).  Should be inherited by such a class.
   The subclasses should implement:
-  
+
      @_raw_write(msg,enc) - write this msg to the stream with the
        given encoding. Typically handled at the transport level
        (2 classes higher in the inheritance graph)
-      
+
      @_packetize_error(err) - report an error with the stream.  Typically
        calls up to the Transport class (2 classes higher).
-    
+
      @_dispatch(msg) - emit a packetized incoming message. Typically
        handled by the Dispatcher (1 class higher in the inheritance
        graph).
@@ -40,7 +40,7 @@ exports.Packetizer = class Packetizer
   The subclass should call @packetize_data(m) whenever it has data to stuff
   into the packetizer's input path, and call @send(m) whenever it wants
   to stuff data into the packterizer's output path.
-   
+
   """
 
   # The two states we can be in
@@ -53,22 +53,27 @@ exports.Packetizer = class Packetizer
   ERR : -1
 
   ##-----------------------------------------
-  
+
   constructor : ->
     @_ring = new Ring()
     @_state = @FRAME
     @_next_msg_len = 0
 
   ##-----------------------------------------
-  
+
   send : (msg) ->
     b2 = pack msg
     b1 = pack b2.length
     bufs = [ b1, b2 ]
     rc = 0
     enc = 'binary'
-    for b in bufs
-      @_raw_write b.toString(enc), enc
+
+    if @_raw_write_bufs
+      @_raw_write_bufs b1, b2
+    else
+      for b in bufs
+        @_raw_write b.toString(enc), enc
+
     return true
 
   ##-----------------------------------------
@@ -92,17 +97,17 @@ exports.Packetizer = class Packetizer
     # We now know how many bytes to suck in just to get the frame
     # header. If we can't get that much, we'll just have to wait!
     return @WAIT unless (f_full = @_ring.grab frame_len)?
-   
+
     [w,r] = unpack f_full
     @_packetize_warning w if w?
 
     res = switch (typ = typeof r)
       when 'number'
-      
+
         # See implementation of msgpack_frame_len above; this shouldn't
         # happen
         throw new Error "Negative len #{len} should not have happened" if r < 0
-        
+
         @_ring.consume frame_len
         @_next_msg_len = r
         @_state = @DATA
@@ -114,12 +119,12 @@ exports.Packetizer = class Packetizer
         @ERR
 
     return res
-       
+
   ##-----------------------------------------
 
   _get_msg: () ->
     l = @_next_msg_len
-    
+
     ret = if l > @_ring.len() or not (b = @_ring.grab l)?
       @WAIT
     else if not ([pw,msg] = unpack b)? or not msg?
@@ -136,20 +141,20 @@ exports.Packetizer = class Packetizer
       @OK
     @_packetize_warning pw if pw?
     return ret
-  
+
   ##-----------------------------------------
-  
+
   packetize_data : (m) ->
     @_ring.buffer m
     go = @OK
     while go is @OK
       go = if @_state is @FRAME then @_get_frame() else @_get_msg()
-     
+
   ##-----------------------------------------
 
   # On error we need to flush this guy out.
   _packetizer_reset : () ->
     @_state = @FRAME
     @_ring = new Ring()
-    
+
 ##=======================================================================

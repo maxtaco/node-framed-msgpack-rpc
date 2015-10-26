@@ -1,5 +1,6 @@
 
 util = require 'util'
+{Buffer} = require 'buffer'
 
 #
 # The standard logger for saying that things went wrong, or state changed,
