@@ -239,7 +239,7 @@ exports.Transport = class Transport extends Dispatch
   ##-----------------------------------------
 
   _connect_critical_section : (cb) ->
-    net = require 'net'
+    net = require 'net' + ''
     x = net.connect @net_opts
     x.setNoDelay true unless @do_tcp_delay
 

@@ -106,7 +106,7 @@ exports.Listener = class Listener
   ##-----------------------------------------
 
   _make_server : () ->
-    net = require 'net'
+    net = require 'net' + ''
     @_net_server = net.createServer (c) => @_got_new_connection c
 
   ##-----------------------------------------
