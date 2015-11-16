@@ -137,7 +137,10 @@ exports.Transport = class Transport extends Dispatch
       err = null
     @_lock.release()
     cb err if cb
-    @_reconnect true if err?
+    if err?
+      @_reconnect true
+    else
+      @_flush_queue()
 
   ##-----------------------------------------
 
@@ -203,6 +206,10 @@ exports.Transport = class Transport extends Dispatch
   # In other classes we can override this...
   # See 'RobustTransport'
   _reconnect : (first_time) -> null
+
+  # In other classes we can override this...
+  # See 'RobustTransport'
+  _flush_queue: () -> null
 
   ##-----------------------------------------
 
