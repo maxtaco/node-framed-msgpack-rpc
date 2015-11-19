@@ -1,5 +1,4 @@
 
-
 exports.time = time = () -> (new Date()).getTime()
 
 exports.Timer = class Timer
@@ -26,5 +25,5 @@ exports.Timer = class Timer
     @_running = false
     @_total = 0
     @_ts = 0
-      
-    
+
+

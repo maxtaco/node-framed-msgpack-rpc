@@ -63,7 +63,7 @@ type =
   SERVER : 1
   CLIENT_NOTIFY : 2
   CLIENT_CALL : 3
-  
+
 ##=======================================================================
 
 F2S = {}
@@ -102,7 +102,7 @@ exports.sflags_to_flags = sflags_to_flags = (s) ->
 ##=======================================================================
 
 exports.Debugger = class Debugger
-  
+
   constructor : (flags, @log_obj, @log_obj_mthd) ->
     # Potentially convert from strings to integer flags
     @flags = if typeof flags is 'string' then sflags_to_flags flags else flags
@@ -121,11 +121,11 @@ exports.Debugger = class Debugger
 
   call : (msg) ->
     new_json_msg = {}
-    
+
     # Usually don't copy the arg or res if it's in the other direction,
     # but this can overpower that
     V = @flags & F.VERBOSE
-    
+
     if (@flags & F.TIMESTAMP)
       new_json_msg.timestamp = (new Date()).getTime() / 1000.0
 
@@ -142,7 +142,7 @@ exports.Debugger = class Debugger
       if do_copy
         val = f2s[val] if (f2s = F2S[flag])?
         new_json_msg[key] = val
-        
+
     @_output new_json_msg
 
 ##=======================================================================
@@ -173,7 +173,7 @@ exports.Message = class Message
   show_arg : (V) ->
     (V or (@is_server() and @is_incoming()) or
           (@is_client() and @is_outgoing()))
-          
+
   show_res : (V) ->
     (V or (@is_server() and @is_outgoing()) or
           (@is_client() and @is_incoming()))

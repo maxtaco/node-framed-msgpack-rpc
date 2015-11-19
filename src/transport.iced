@@ -1,4 +1,4 @@
-net = require 'net'
+
 {Lock} = require './lock'
 {Dispatch} = require './dispatch'
 log = require './log'
@@ -10,7 +10,7 @@ dbg = require './debug'
 
 #
 # A shared wrapper object for which close is idempotent
-# 
+#
 class StreamWrapper
   constructor : (@_net_stream, @_parent) ->
     @_generation = @_parent.next_generation()
@@ -42,7 +42,7 @@ class StreamWrapper
     if @_net_stream then @_net_stream.remoteAddress else null
   remote_port : () ->
     if @_net_stream then @_net_stream.remotePort else null
-  
+
 
 ##=======================================================================
 
@@ -50,25 +50,25 @@ exports.Transport = class Transport extends Dispatch
 
   ##-----------------------------------------
   # Public API
-  # 
+  #
 
   constructor : ({ @port, @host, @net_opts, net_stream, @log_obj,
                    @parent, @do_tcp_delay, @hooks, dbgr, @path, connect_timeout}) ->
     super
-    
+
     @host = "localhost" if not @host or @host is "-"
     @net_opts = {} unless @net_opts
     @net_opts.host = @host
     @net_opts.port = @port
     @net_opts.path = @path
     @_explicit_close = false
-    
+
     @_remote_str = [ @host, @port].join ":"
-    @set_logger @log_obj 
-    
+    @set_logger @log_obj
+
     @_lock = new Lock()
     @_generation = 1
-    
+
     @_dbgr = dbgr
 
     # Give up on a connection after 10s timeout
@@ -88,12 +88,12 @@ exports.Transport = class Transport extends Dispatch
   ##-----------------------------------------
 
   set_debugger : (d) -> @_dbgr = d
-  
+
   ##---------------------------------------
-  
+
   set_debug_flags : (d) ->
     @set_debugger dbg.make_debugger d, @log_obj
-   
+
   ##-----------------------------------------
 
   next_generation : () ->
@@ -102,31 +102,31 @@ exports.Transport = class Transport extends Dispatch
     ret = @_generation
     @_generation++
     return ret
- 
+
   ##-----------------------------------------
 
-  get_generation : () -> if @_netw then @_netw.get_generation() else -1 
- 
+  get_generation : () -> if @_netw then @_netw.get_generation() else -1
+
   ##-----------------------------------------
 
   remote_address : () -> if @_netw? then @_netw.remote_address() else null
   remote_port : () -> if @_netw? then @_netw.remote_port() else null
-   
+
   ##-----------------------------------------
 
   set_logger : (o) ->
     o = log.new_default_logger() unless o
     @log_obj = o
     @log_obj.set_remote @_remote_str
-   
+
   ##-----------------------------------------
 
   get_logger : () -> @log_obj
-   
+
   ##-----------------------------------------
 
   is_connected : () -> @_netw?.is_connected()
-   
+
   ##-----------------------------------------
 
   connect : (cb) ->
@@ -137,7 +137,10 @@ exports.Transport = class Transport extends Dispatch
       err = null
     @_lock.release()
     cb err if cb
-    @_reconnect true if err?
+    if err?
+      @_reconnect true
+    else
+      @_flush_queue()
 
   ##-----------------------------------------
 
@@ -146,7 +149,7 @@ exports.Transport = class Transport extends Dispatch
     @_close w
 
   ##-----------------------------------------
-  
+
   close : () ->
     @_explicit_close = true
     if @_netw
@@ -162,22 +165,22 @@ exports.Transport = class Transport extends Dispatch
   _fatal : (e) -> @log_obj.fatal e
   _debug : (e) -> @log_obj.debug e
   _error : (e) -> @log_obj.error e
-  
+
   ##-----------------------------------------
 
   _close : (netw) ->
     # If an optional close hook was specified, call it here...
     @hooks?.eof? netw
-    @_reconnect false if netw.close()
+    @_reconnect false if netw?.close()
 
   ##-----------------------------------------
 
   _handle_error : (e, netw) ->
     @_error e
     @_close netw
-   
+
   ##-----------------------------------------
-  
+
   _packetize_error : (err) ->
     # I think we'll always have the right TCP stream here
     # if we grab the one in the this object.  A packetizer
@@ -187,25 +190,29 @@ exports.Transport = class Transport extends Dispatch
 
   _packetize_warning : (w) ->
     @_warn "In packetizer: #{w}"
-    
+
   ##-----------------------------------------
 
   _handle_close : (netw) ->
     @_info "EOF on transport" unless @_explicit_close
     @_close netw
-    
+
     # for TCP connections that are children of Listeners,
     # we close the connection here and disassociate
     @parent.close_child @ if @parent
-   
+
   ##-----------------------------------------
 
   # In other classes we can override this...
   # See 'RobustTransport'
   _reconnect : (first_time) -> null
- 
+
+  # In other classes we can override this...
+  # See 'RobustTransport'
+  _flush_queue: () -> null
+
   ##-----------------------------------------
-  
+
   _activate_stream : (x) ->
 
     @_info "connection established"
@@ -216,7 +223,7 @@ exports.Transport = class Transport extends Dispatch
     # in the case of a reconnect....
     w = new StreamWrapper x, @
     @_netw = w
-    
+
     # If optional hooks were specified, call them here; give as an
     # argument the new StreamWrapper so that way the subclass can
     # issue closes on the connection
@@ -224,21 +231,22 @@ exports.Transport = class Transport extends Dispatch
 
     #
     # MK 2012/12/20 -- Revisit me!
-    # 
+    #
     # It if my current belief that we don't have to listen to the event
     # 'end', because a 'close' event will always follow it, and we do
     # act on the close event. The distance between the two gives us
     # the time to act on a TCP-half-close, which we are not doing.
     # So for now, we are going to ignore the 'end' and just act
     # on the 'close'.
-    # 
+    #
     x.on 'error', (err) => @_handle_error err, w
     x.on 'close', ()    => @_handle_close w
     x.on 'data',  (msg) => @packetize_data msg
 
   ##-----------------------------------------
-  
+
   _connect_critical_section : (cb) ->
+    net = require 'net' + ''
     x = net.connect @net_opts
     x.setNoDelay true unless @do_tcp_delay
 
@@ -254,10 +262,10 @@ exports.Transport = class Transport extends Dispatch
     # Also, if the connection times out, let's abandon ship
     # and try again.  By default, this is for 10s
     setTimeout rv.id(TMO).defer(), @_connect_timeout
-    
+
     ok = false
     await rv.wait defer rv_id
-    
+
     switch rv_id
       when CON then ok = true
       when ERR then @_warn err
@@ -275,19 +283,19 @@ exports.Transport = class Transport extends Dispatch
 
   ##-----------------------------------------
   # To fulfill the packetizer contract, the following...
-  
+
   _raw_write : (msg, encoding) ->
     if not @_netw?
       @_warn "write attempt with no active stream"
     else
       @_netw.write msg, encoding
- 
+
   ##-----------------------------------------
 
 ##=======================================================================
 
 exports.RobustTransport = class RobustTransport extends Transport
-   
+
   ##-----------------------------------------
 
   # Take two dictionaries -- the first is as in Transport,
@@ -296,21 +304,21 @@ exports.RobustTransport = class RobustTransport extends Transport
   #
   #    reconnect_delay -- the number of seconds to delay between attempts
   #       to reconnect to a downed server.
-  # 
+  #
   #    queue_max -- the limit to how many calls we'll queue while we're
   #       waiting on a reconnect.
-  # 
+  #
   #    warn_threshhold -- if a call takes more than this number of seconds,
   #       a warning will be fired when the RPC completes.
-  # 
+  #
   #    error_threshhold -- if a call *is taking* more than this number of
   #       seconds, we will make an error output while the RPC is outstanding,
   #       and then make an error after we know how long it took.
   #
-  #      
+  #
   constructor : (sd, d = {}) ->
     super sd
-    
+
     { @queue_max, @warn_threshhold, @error_threshhold } = d
 
     # in seconds, provide a default of 1s for a reconnect delay
@@ -321,11 +329,11 @@ exports.RobustTransport = class RobustTransport extends Transport
     # or unspecifed value means use a reasonable default, which we
     # supply here as 1000.
     @queue_max = 1000 unless @queue_max?
-    
+
     @_time_rpcs = @warn_threshhold? or @error_threshhold?
-    
+
     @_waiters = []
-   
+
   ##-----------------------------------------
 
   _reconnect : (first_time) ->
@@ -339,13 +347,13 @@ exports.RobustTransport = class RobustTransport extends Transport
     @_waiters = []
     for w in tmp
       @invoke w...
-  
+
   ##-----------------------------------------
- 
+
   _connect_loop : (first_time = false, cb) ->
     prfx = if first_time then "" else "re"
     i = 0
-    
+
     await @_lock.acquire defer()
 
     go = true
@@ -366,12 +374,12 @@ exports.RobustTransport = class RobustTransport extends Transport
           await setTimeout defer(), @reconnect_delay*1000
         else
           go = false
-    
+
     if @is_connected()
       s = if i is 1 then "" else "s"
       @_warn "#{prfx}connected after #{i} attempt#{s}"
       @_flush_queue()
-      
+
     @_lock.release()
     cb() if cb
 
@@ -398,7 +406,7 @@ exports.RobustTransport = class RobustTransport extends Transport
 
     # will we leak memory for the calls that never come back?
     flag = true
-    
+
     while flag
       if which is TIMEOUT
         @_error "RPC call to '#{meth}' is taking > #{et/1000}s"
@@ -416,7 +424,7 @@ exports.RobustTransport = class RobustTransport extends Transport
     m.call @, "RPC call to '#{meth}' finished in #{dur/1000}s" if m
 
     cb rpc_res...
-   
+
   ##-----------------------------------------
 
   invoke : (arg, cb) ->
@@ -432,7 +440,7 @@ exports.RobustTransport = class RobustTransport extends Transport
       @_info "Queuing call to #{meth} (num queued: #{@_waiters.length})"
     else if @queue_max > 0
       @_warn "Queue overflow for #{meth}"
-  
+
 ##=======================================================================
 
 exports.createTransport = (opts) ->

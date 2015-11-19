@@ -32,14 +32,14 @@ exports.List = class List
   remove : (w) ->
     next = w.__list_next
     prev = w.__list_prev
-    
+
     if prev then prev.__list_next = next
     else         @_head = next
-    
+
     if next then next.__list_prev = prev
     else         @_tail = prev
 
     w.__list_next = null
     w.__list_prev = null
-    
-##=======================================================================     
+
+##=======================================================================

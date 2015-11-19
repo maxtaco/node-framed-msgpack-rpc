@@ -1,5 +1,4 @@
 
-net = require 'net'
 {Transport} = require './transport'
 {List} = require './list'
 log = require './log'
@@ -30,7 +29,7 @@ exports.Listener = class Listener
     else if @path?
       l.set_remote @path
     return l
-   
+
   ##-----------------------------------------
 
   # You actually don't want to apply this to children,
@@ -40,18 +39,18 @@ exports.Listener = class Listener
     @_dbgr = d
 
   ##-----------------------------------------
-    
+
   set_debug_flags : (f, apply_to_children) ->
     @set_debugger dbg.make_debugger f, @log_obj
     if apply_to_children
       @walk_children (c) => c.set_debug_flags f
-   
+
   ##-----------------------------------------
 
   set_logger : (o) ->
     o = @_default_logger() unless o?
     @log_obj = o
-   
+
   ##-----------------------------------------
 
   # Feel free to change this for your needs (if you want to wrap a connection
@@ -71,25 +70,25 @@ exports.Listener = class Listener
     return x
 
   ##-----------------------------------------
-  
+
   make_new_log_object : (c) ->
     a = c.address()
     r = [ c.address, c.port ].join ":"
     @log_obj.make_child { prefix : "RPC", remote : r }
-    
+
   ##-----------------------------------------
 
   walk_children : (fn) -> @_children.walk fn
- 
+
   ##-----------------------------------------
 
   close_child : (c) -> @_children.remove c
-   
+
   ##-----------------------------------------
 
   set_port : (p) ->
     @port = p
-   
+
   ##-----------------------------------------
 
   _got_new_connection : (c) ->
@@ -103,10 +102,11 @@ exports.Listener = class Listener
 
   got_new_connection : (x) ->
     throw new Error "@got_new_connection() is pure virtual; please implement!"
-   
+
   ##-----------------------------------------
 
   _make_server : () ->
+    net = require 'net' + ''
     @_net_server = net.createServer (c) => @_got_new_connection c
 
   ##-----------------------------------------
@@ -115,39 +115,39 @@ exports.Listener = class Listener
     await @_net_server.close defer() if @_net_server
     @_net_server = null
     cb()
- 
+
   ##-----------------------------------------
 
   handle_close : () ->
     @log_obj.info "listener closing down"
-   
+
   ##-----------------------------------------
 
   # A sensible default handler
   handle_error : (err) ->
     @_net_server = null
     @log_obj.error "error in listener: #{err}"
-   
+
   ##-----------------------------------------
 
   _set_hooks : () ->
     @_net_server.on 'error', (err) => @handle_error err
     @_net_server.on 'close', (err) => @handle_close()
-   
+
   ##-----------------------------------------
 
   listen : (cb) ->
     @_make_server()
-    
+
     [ OK, ERR ] = [0..1]
     rv = new iced.Rendezvous
     x = @_net_server
     if @port? then x.listen @port, @host
     else           x.listen @path
-    
+
     x.on 'error',     rv.id(ERR).defer err
     x.on 'listening', rv.id(OK).defer()
-    
+
     await rv.wait defer which
     if which is OK
       err = null
@@ -155,7 +155,7 @@ exports.Listener = class Listener
     else
       @log_obj.error err
       @_net_server = null
-      
+
     cb err
 
   ##-----------------------------------------
@@ -172,5 +172,5 @@ exports.Listener = class Listener
         await setTimeout defer(), delay*1000
       else go = false
     cb err
-      
+
 
