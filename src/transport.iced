@@ -1,4 +1,5 @@
 net = require 'net'
+tls = require 'tls'
 {Lock} = require './lock'
 {Dispatch} = require './dispatch'
 log = require './log'
@@ -53,7 +54,8 @@ exports.Transport = class Transport extends Dispatch
   # 
 
   constructor : ({ @port, @host, @net_opts, net_stream, @log_obj,
-                   @parent, @do_tcp_delay, @hooks, dbgr, @path, connect_timeout}) ->
+                   @parent, @do_tcp_delay, @hooks, dbgr, @path,
+                   @tls_opts, connect_timeout}) ->
     super
     
     @host = "localhost" if not @host or @host is "-"
@@ -239,7 +241,22 @@ exports.Transport = class Transport extends Dispatch
   ##-----------------------------------------
   
   _connect_critical_section : (cb) ->
-    x = net.connect @net_opts
+    # The presence of tls_opts determines we do a regular net.connect or a
+    # tls.connect.
+    if @tls_opts?
+      # Merge the net_opts and tls_opts.
+      opts = {}
+      for name, val of @net_opts
+        opts[name] = val
+      for name, val of @tls_opts
+        opts[name] = val
+      x = tls.connect opts
+      # We don't want to use the regular "connect" event with TLS, because that
+      # happens before the TLS handshake and so masks errors.
+      connect_event_name = 'secureConnect'
+    else
+      x = net.connect @net_opts
+      connect_event_name = 'connect'
     x.setNoDelay true unless @do_tcp_delay
 
     # Some local switch codes....
@@ -247,9 +264,9 @@ exports.Transport = class Transport extends Dispatch
 
     # We'll take any one of these three events...
     rv = new iced.Rendezvous
-    x.once 'connect', rv.id(CON).defer()
-    x.once 'error',   rv.id(ERR).defer(err)
-    x.once 'close',   rv.id(CLS).defer()
+    x.once connect_event_name, rv.id(CON).defer()
+    x.once 'error',            rv.id(ERR).defer(err)
+    x.once 'close',            rv.id(CLS).defer()
 
     # Also, if the connection times out, let's abandon ship
     # and try again.  By default, this is for 10s

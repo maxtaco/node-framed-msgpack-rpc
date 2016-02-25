@@ -12,8 +12,8 @@ set -e -u -o pipefail
 cd "$(dirname "$BASH_SOURCE")"
 
 # Create two CAs, a good one and a bad one. The only difference between the two
-# is that all test clients will expect the good one, and when we want to test
-# the failure case we'll have the test server use the bad one.
+# is that all test servers will use the good one, and when we want to test the
+# failure case we'll have the test client look for the bad one.
 for virtuousness in good bad ; do
   mkdir -p "./$virtuousness"
   openssl req -new -x509 -days 9999 -config ca.cnf \
