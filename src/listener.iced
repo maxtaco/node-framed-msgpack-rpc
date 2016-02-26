@@ -1,5 +1,6 @@
 
 net = require 'net'
+tls = require 'tls'
 {Transport} = require './transport'
 {List} = require './list'
 log = require './log'
@@ -13,7 +14,7 @@ exports.Listener = class Listener
 
   ##-----------------------------------------
 
-  constructor : ({@port, @host, @path, @TransportClass, log_obj}) ->
+  constructor : ({@port, @host, @path, @TransportClass, log_obj, @tls_opts}) ->
     @TransportClass = Transport unless @TransportClass
     @set_logger log_obj
     @_children = new List
@@ -107,7 +108,12 @@ exports.Listener = class Listener
   ##-----------------------------------------
 
   _make_server : () ->
-    @_net_server = net.createServer (c) => @_got_new_connection c
+    # The presence of tls_opts determines we do a regular net.createServer or a
+    # tls.createServer.
+    if @tls_opts?
+      @_net_server = tls.createServer @tls_opts, (c) => @_got_new_connection c
+    else
+      @_net_server = net.createServer (c) => @_got_new_connection c
 
   ##-----------------------------------------
 
