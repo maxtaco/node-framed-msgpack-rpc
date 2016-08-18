@@ -1,3 +1,8 @@
+## v1.1.10 (2016-08-17)
+
+Bugfix:
+ * Fix crasher in _packetizer_error failure path
+
 ## v1.1.9 (2015-08-22)
 
 Features:
