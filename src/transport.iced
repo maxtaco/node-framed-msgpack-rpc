@@ -262,7 +262,7 @@ exports.Transport = class Transport extends Dispatch
       when CON then ok = true
       when ERR then @_warn err
       when CLS then @_warn "connection closed during open"
-      when TMO then @_warn "connection timed out after #{@_connect_timeout}s"
+      when TMO then @_warn "connection timed out after #{@_connect_timeout}ms"
 
     if ok
       # Now remap the event emitters
